@@ -5,14 +5,14 @@ function mGarrenBoozerOmnigenity_HalfHelicity()
 % See "20190701-01 Omnigenity construction with single layer iteration.docx"
 
 % N_phi = Number of grid points in phi
-N_phi_array = 101;
+N_phi_array = 201;
 %N_phi_array = [31];
 %N_phi_array = [7, 15];
 
-N_theta = 64;%256; 
+N_theta = 32;%256; 
 
 
-nfp = 2; % For now only nfp=1 is allowed.
+nfp = 5; % For now only nfp=1 is allowed.
 
 % Shape of the magnetic axis:
 % R0c = [1.0,0,-0.2,0,0];
@@ -62,9 +62,9 @@ Z0c = [0,0,0,0,0,0,0,0,0,0];
 
 R0c= [1.0,   0,  0,  0,  0,  0, 0, 0,0,0,0,0,0];
 Z0s = [0,   0,  0,  0,  0,  0, 0, 0,0,0,0,0,0];
-Z0s(3) = 0.05;
-R0c(4) = 0.02;
-Z0s(4) = 0.2*R0c(4);
+Z0s(3) = 0.007;%0.0065; % 0.003;
+R0c(4) = -0.001;
+Z0s(4) = 0.0026;%0.0027;
 R0c(2) = -((R0c(4) + 9*nfp*nfp* R0c(4))/(1 + nfp*nfp));
 R0c(3) = -(1/(1 + 4*nfp*nfp));
 Z0s(2) = -((4*Z0s(3) + 8*nfp*nfp*Z0s(3) + 6*Z0s(4)+ 27*nfp*nfp*Z0s(4))/(2 + nfp^2));
@@ -82,8 +82,8 @@ Z0c = zeros(size(R0c));
 % % %         Z0s(4) = Axis_Shape(3);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-B0_1 = 0.15;
-B0_2 = 0;%-0.005;
+B0_1 = 0.12;
+B0_2 = -0.002;
 
 B0_as_a_function_of_varphi = @(varphi) 1 + B0_1 * cos(varphi) + B0_2*cos(varphi*2);
 
@@ -113,8 +113,8 @@ k_for_alpha = 2;
 alpha_shift = 5*pi/2;
 
 
-finite_r_option='linear';
-%finite_r_option='nonlinear';
+%finite_r_option='linear';
+finite_r_option='nonlinear';
 
 extra_condition_option = 1;
 % 1 = force sigma=0 at the phi specified by interpolateTo0
@@ -138,7 +138,7 @@ verify_Jacobian = false;
 tolerance = 1e-30;
 
 % r is used only for drawing the flux surface shapes at the end.
-aspect_ratio = 10;
+aspect_ratio = 12;
 
 r = 1.0 / aspect_ratio;
 
@@ -309,7 +309,7 @@ for which_resolution = 1:numel(N_phi_array)
     
     torsion = torsion_numerator ./ torsion_denominator;
     
-    int_torsion= trapz(phi,torsion)
+    int_torsion= trapz(phi,torsion);
     %%%%%%% Check for curvature
 %     
 %     
@@ -377,9 +377,13 @@ for which_resolution = 1:numel(N_phi_array)
     binormal_cylindrical_signed = binormal_cylindrical;
     kappa_cylindrical_signed(indices_for_sign_flip,:) = -kappa_cylindrical_signed(indices_for_sign_flip,:);
     binormal_cylindrical_signed(indices_for_sign_flip,:) = -binormal_cylindrical_signed(indices_for_sign_flip,:);
-    kappa_cylindrical_signed_tripled = repmat(kappa_cylindrical_signed,3,1);
-    binormal_cylindrical_signed_tripled = repmat(binormal_cylindrical_signed,3,1);
-
+    kappa_cylindrical_signed_tripled = repmat(-kappa_cylindrical_signed,3,1);
+    binormal_cylindrical_signed_tripled = repmat(-binormal_cylindrical_signed,3,1);
+    
+    indices_for_sign_flip_tripled = [N_phi+1:2*N_phi];
+    binormal_cylindrical_signed_tripled(indices_for_sign_flip_tripled,:) = -binormal_cylindrical_signed_tripled(indices_for_sign_flip_tripled,:);
+    kappa_cylindrical_signed_tripled(indices_for_sign_flip_tripled,:) = -kappa_cylindrical_signed_tripled(indices_for_sign_flip_tripled,:);
+    
     curvature_signed = curvature;
     curvature_signed(indices_for_sign_flip) = -curvature(indices_for_sign_flip);
     curvature = curvature_signed;
@@ -397,6 +401,12 @@ for which_resolution = 1:numel(N_phi_array)
         binormal_cylindrical_signed_tripled(:,1) .* sinphi + binormal_cylindrical_signed_tripled(:,2) .* cosphi, ...
         binormal_cylindrical_signed_tripled(:,3)];
     
+    
+%     figure(7)
+%     plot(kappa_Cartesian_signed_tripled)
+%     hold on 
+%     figure(8)
+%     plot(binormal_Cartesian_signed_tripled)
 %     tangent_Cartesian(1,:)
 %     kappa_Cartesian(1,:)
     
@@ -448,7 +458,7 @@ helicity = helicity(end)/(2*pi);
     end
     
     
- n_for_alpha = -nfp*crosses/4
+ n_for_alpha = -nfp*crosses/4;
  n_for_alpha = 0.5;
 
  figure(357)
@@ -505,12 +515,16 @@ helicity = helicity(end)/(2*pi);
     % -------------------------------------------------------------    
     % Now that we know varphi(phi), compute d on the phi grid:
      d = zeros(size(phi));
+     
+     d_k = 0.28;
+     dk_cos = -0.065;
+     dk_sin = 0.04;
     
     for j= 1:size(phi)
         if phi(j) < pi/nfp
-            d(j) = curvature(j).*sqrt(0.45./B0(j));% - curvature(j).*0.35.*cos(nfp*varphi(j));% + curvature(j).*0.3.*sin(nfp*varphi(j))   ;
+            d(j) = curvature(j).*sqrt(d_k./B0(j))+ curvature(j).*dk_cos.*cos(nfp*varphi(j)) + curvature(j).*dk_sin.*sin(nfp*varphi(j))   ;
         elseif phi(j) > pi/nfp
-           d(j) = curvature(j).*sqrt(0.45./B0(j));%+ curvature(j).*0.35.*cos(nfp*varphi(j));%+ curvature(j).*0.3.*sin(nfp*varphi(j)) ; 
+           d(j) = curvature(j).*sqrt(d_k./B0(j)) + curvature(j).*dk_cos.*cos(nfp*varphi(j)) - curvature(j).*dk_sin.*sin(nfp*varphi(j)) ; 
         end
     end
    
@@ -878,6 +892,7 @@ helicity = helicity(end)/(2*pi);
     Y1s = sign_G * curvature .* ( B1c_over_B0 + B1s_over_B0 .* sigma) ./ ((B1c_over_B0.*B1c_over_B0 + B1s_over_B0.*B1s_over_B0).*B0);
     Y1c = sign_G * curvature .* (-B1s_over_B0 + B1c_over_B0 .* sigma) ./ ((B1c_over_B0.*B1c_over_B0 + B1s_over_B0.*B1s_over_B0).*B0);
    
+   
     
     figure(41)
     
@@ -899,10 +914,10 @@ helicity = helicity(end)/(2*pi);
         angle_untwist = -n_for_alpha * nfp * varphi;
         sinangle = sin(angle_untwist);
         cosangle = cos(angle_untwist);
-        X1s_untwisted = (X1s .*   cosangle  + X1c .* sinangle);%* self.sign_curvature_change
-        X1c_untwisted = (X1s .* (-sinangle) + X1c .* cosangle);% * self.sign_curvature_change
-        Y1s_untwisted = (Y1s .*   cosangle  + Y1c .* sinangle);% * self.sign_curvature_change
-        Y1c_untwisted = (Y1s .* (-sinangle) + Y1c .* cosangle);% * self.sign_curvature_change
+        X1s_untwisted = X1s;%(X1s .*   cosangle  + X1c .* sinangle);%* self.sign_curvature_change
+        X1c_untwisted = X1c;%(X1s .* (-sinangle) + X1c .* cosangle);% * self.sign_curvature_change
+        Y1s_untwisted = Y1s;%(Y1s .*   cosangle  + Y1c .* sinangle);% * self.sign_curvature_change
+        Y1c_untwisted = Y1c;%(Y1s .* (-sinangle) + Y1c .* cosangle);% * self.sign_curvature_change
 % 
 %     figure(1001)
 %     plot(phi,curvature)
@@ -1061,10 +1076,10 @@ helicity = helicity(end)/(2*pi);
     
     % See my note 20180329-03 for derivation of the formula below for
     % elongation:
-% %     p = R1s.*R1s + R1c.*R1c + Z1s.*Z1s + Z1c.*Z1c;
-% %     q = R1s.*Z1c - R1c.*Z1s;
-    p = X1s.*X1s + X1c.*X1c + Y1s.*Y1s + Y1c.*Y1c;
-    q = X1s.*Y1c - X1c.*Y1s;
+    p = R1s.*R1s + R1c.*R1c + Z1s.*Z1s + Z1c.*Z1c;
+    q = R1s.*Z1c - R1c.*Z1s;
+%     p = X1s.*X1s + X1c.*X1c + Y1s.*Y1s + Y1c.*Y1c;
+%     q = X1s.*Y1c - X1c.*Y1s;
     elongation = 2*abs(q)./(p - sqrt(p.*p-4*q.*q));
 
     subplot(numRows,numCols,plotNum); plotNum = plotNum + 1;
@@ -1156,7 +1171,15 @@ fprintf('standard_deviation_of_Z: %.15g\n',standard_deviation_of_Z)
 % % %     plot(R0(j) + r * (R1c(j)*cos(theta) + R1s(j)*sin(theta)), Z0(j) + r * (Z1c(j)*cos(theta) + Z1s(j)*sin(theta)),'.-','Color','m')
 % % % end
 
+figure(2345)
+plot(phi,elongation)
+hold on 
 
+figure(2346)
+plot(phi, (d ./ curvature) .^ 2 , '.-', 'DisplayName',sprintf('dk=%d',d_k))
+    hold on     
+ plot(phi, (d ./ curvature) , '.-', 'DisplayName',sprintf('dk=%d',d_k))
+    title('d^2 / \kappa^2')
 
 figure(7 + figure_offset)
 hold on
@@ -1372,12 +1395,25 @@ else
 %     Y1c_tripled = repmat(Y1c_signed,3,1);
 %     Y1s_tripled = repmat(Y1s_signed,3,1);
 
-    X1c_tripled = repmat(X1c_untwisted,3,1);
-    X1s_tripled = repmat(X1s_untwisted,3,1);
-    Y1c_tripled = repmat(Y1c_untwisted,3,1);
-    Y1s_tripled = repmat(Y1s_untwisted,3,1);
+    X1c_tripled = repmat(-X1c_untwisted,3,1);
+    X1s_tripled = repmat(-X1s_untwisted,3,1);
+    Y1c_tripled = repmat(-Y1c_untwisted,3,1);
+    Y1s_tripled = repmat(-Y1s_untwisted,3,1);
+
     
+    index_for_sign_change =  [N_phi+1:2*N_phi];%indices_for_sign_flip + N_phi;
     
+    X1c_tripled(index_for_sign_change) = -X1c_tripled(index_for_sign_change);
+    X1s_tripled(index_for_sign_change) = -X1s_tripled(index_for_sign_change);
+    Y1c_tripled(index_for_sign_change) = -Y1c_tripled(index_for_sign_change);
+    Y1s_tripled(index_for_sign_change) = -Y1s_tripled(index_for_sign_change);
+    
+    figure(6)
+    plot(X1c_tripled)
+    hold on 
+    plot(Y1c_tripled)
+    plot(Y1s_tripled)
+    plot(X1s_tripled)
     
     fprintf('Beginning finite_r_option nonlinear root-finding.\n')
     for j_theta = 1:N_theta
@@ -1385,6 +1421,7 @@ else
         sintheta = sin(theta_1D(j_theta));
         X1 = X1c_tripled * costheta + X1s_tripled * sintheta;
         Y1 = Y1c_tripled * costheta + Y1s_tripled * sintheta;
+        
 
         for j_phi = 1:N_phi
             % Solve for the phi0 such that r0 + X n + Y b has the desired
@@ -1433,7 +1470,7 @@ normalizer = 2 * d_theta * d*zeta / (4*pi*pi);
             n_min = -ntor;
         end
         for n = n_min:ntor
-            angle = m * theta_2D - n*nfp* phi_2D; %Katia change
+            angle = m * theta_2D - n*nfp*phi_2D; %Katia change
             sinangle = sin(angle);
             cosangle = cos(angle);
             rbc(ntor+1+n, m+1) = sum(sum(R_2D .* cosangle)) * normalizer;
